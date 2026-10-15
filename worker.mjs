@@ -12,22 +12,29 @@ async function youtube(resource, params, key) {
   return data.items;
 }
 
-export async function discover(key) {
+export async function discover(key, searchLive = async () => []) {
   // The uploads playlist avoids the much more restrictive search quota.
   const uploads = await youtube('playlistItems', {
     part: 'contentDetails', playlistId: `UU${CHANNEL.slice(2)}`, maxResults: '50'
   }, key);
   const ids = [...new Set([CURRENT, ...uploads.map(item => item.contentDetails?.videoId)])]
     .filter(id => /^[a-zA-Z0-9_-]{11}$/.test(id)).slice(0, 50);
-  const videos = await youtube('videos', {
+  let videos = await youtube('videos', {
     part: 'snippet,liveStreamingDetails,status', id: ids.join(',')
   }, key);
-  const live = videos.filter(video =>
+  const active = video =>
     video.snippet?.channelId === CHANNEL &&
     video.snippet?.liveBroadcastContent === 'live' &&
     video.liveStreamingDetails?.actualStartTime &&
-    !video.liveStreamingDetails.actualEndTime && video.status?.embeddable === true
-  ).sort((a, b) => Date.parse(b.liveStreamingDetails.actualStartTime) - Date.parse(a.liveStreamingDetails.actualStartTime));
+    !video.liveStreamingDetails.actualEndTime && video.status?.embeddable === true;
+  if (!videos.some(active)) {
+    const found = await searchLive();
+    const liveIds = found.map(item => item.id?.videoId).filter(id => /^[a-zA-Z0-9_-]{11}$/.test(id));
+    if (liveIds.length) videos = await youtube('videos', {
+      part: 'snippet,liveStreamingDetails,status', id: liveIds.join(',')
+    }, key);
+  }
+  const live = videos.filter(active).sort((a, b) => Date.parse(b.liveStreamingDetails.actualStartTime) - Date.parse(a.liveStreamingDetails.actualStartTime));
   return { status: live.length ? 'live' : 'offline', videoId: live[0]?.id ?? null, watchUrl: WATCH };
 }
 
@@ -47,7 +54,22 @@ export default {
     const cached = await caches.default.match(cacheKey);
     if (cached) return cached;
     try {
-      const response = Response.json(await discover(env.YOUTUBE_API_KEY), { headers });
+      const searchLive = async () => {
+        // Search has a separate, restrictive quota. Cache it for 15 minutes;
+        // regular uploads-based discovery still runs every minute.
+        const searchKey = new Request(`${url.origin}/_internal/youtube-live-search-v1`);
+        const hit = await caches.default.match(searchKey);
+        if (hit) return hit.json();
+        const items = await youtube('search', {
+          part: 'snippet', channelId: CHANNEL, eventType: 'live',
+          type: 'video', maxResults: '10', videoEmbeddable: 'true'
+        }, env.YOUTUBE_API_KEY);
+        await caches.default.put(searchKey, Response.json(items, {
+          headers: { 'Cache-Control': 'public, max-age=900' }
+        }));
+        return items;
+      };
+      const response = Response.json(await discover(env.YOUTUBE_API_KEY, searchLive), { headers });
       ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
       return response;
     } catch {

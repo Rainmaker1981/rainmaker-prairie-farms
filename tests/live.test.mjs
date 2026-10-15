@@ -2,6 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker, { discover } from '../worker.mjs';
 
+test('finds an active broadcast missing from uploads using live search', async () => {
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => Response.json({ items: ++calls < 3 ? [] : [{
+    id: 'newlive1234', snippet: { channelId: 'UCNC_0PiZKPt8Nnd62q7qr5w', liveBroadcastContent: 'live' },
+    status: { embeddable: true }, liveStreamingDetails: { actualStartTime: '2026-10-15T18:00:00Z' }
+  }] });
+  try {
+    const result = await discover('test-key', async () => [{ id: { videoId: 'newlive1234' } }]);
+    assert.equal(result.status, 'live');
+    assert.equal(result.videoId, 'newlive1234');
+  } finally { globalThis.fetch = original; }
+});
+
 test('discovery selects live embeddable channel broadcasts and excludes ended or foreign videos', async () => {
   const original = globalThis.fetch;
   const video = (id, extra = {}) => ({ id, snippet: { channelId: 'UCNC_0PiZKPt8Nnd62q7qr5w', liveBroadcastContent: 'live' }, status: { embeddable: true }, liveStreamingDetails: { actualStartTime: '2026-10-15T12:00:00Z' }, ...extra });

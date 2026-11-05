@@ -16,8 +16,33 @@
       <article class="product-card"><span class="product-icon" aria-hidden="true">🥚</span><h3>Farm eggs</h3><p>Chicken and duck eggs when the flock and season allow.</p><span class="season-tag">Availability varies</span></article>
       <article class="product-card"><span class="product-icon" aria-hidden="true">🥒</span><h3>Seasonal produce</h3><p>Vegetables from the garden, offered fresh as they are harvested.</p><span class="season-tag">In season</span></article>
       <article class="product-card"><span class="product-icon" aria-hidden="true">🫙</span><h3>Pickles & preserves</h3><p>Small-batch goods made from farm produce as time and harvest permit.</p><span class="season-tag">Limited batches</span></article>
-      <article class="product-card"><span class="product-icon" aria-hidden="true">🍞</span><h3>Sourdough</h3><p>Elemental sourdough bread may be available by advance request.</p><span class="season-tag">By request</span></article>
+      <article class="product-card"><span class="product-icon" aria-hidden="true">🍞</span><h3>Fresh baked artisan sourdough</h3><p>Small batch, big flavor. Available through Rainmaker Prairie Farms, prepared by <strong>Elemental Sourdough</strong>.</p><p>Classic · Roasted Garlic · Five Seed · Jalapeño Cheddar · Marble Rye · Italian Rye</p><span class="season-tag">Preorder available</span></article>
     </section>
+    <section class="section-pad" aria-labelledby="order-heading">
+      <div class="section-heading"><p class="eyebrow">Farmstand preorders</p><h2 id="order-heading">Order farm goods together</h2><p>Request sourdough and other farm products in one order. We will confirm availability, pricing, and pickup details before your order is finalized. No payment is collected here.</p></div>
+      <form id="farm-order" style="max-width:680px;display:grid;gap:1rem">
+        <label for="customer-name">Your name</label><input id="customer-name" required autocomplete="name" style="padding:.75rem">
+        <label for="customer-email">Your email or phone</label><input id="customer-email" required style="padding:.75rem">
+        <label for="bread-flavor">Sourdough flavor</label><select id="bread-flavor" style="padding:.75rem"><option value="">No sourdough</option><option>Classic</option><option>Roasted Garlic</option><option>Five Seed</option><option>Jalapeño Cheddar</option><option>Marble Rye</option><option>Italian Rye</option></select>
+        <label for="bread-qty">Sourdough loaves</label><input id="bread-qty" type="number" min="0" max="99" value="0" style="padding:.75rem">
+        <label for="other-items">Other farmstand items and quantities (eggs, produce, preserves, etc.)</label><textarea id="other-items" rows="4" style="padding:.75rem" placeholder="Example: 2 dozen chicken eggs, 1 jar of pickles"></textarea>
+        <label for="order-notes">Pickup preference or notes</label><textarea id="order-notes" rows="3" style="padding:.75rem"></textarea>
+        <button class="button" type="submit" style="cursor:pointer">Send preorder request</button>
+      </form>
+      <p id="order-help" role="status">Submitting opens your email app with the order details. Send the email to complete your request.</p>
+    </section>
+    <script>
+    document.getElementById('farm-order').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const v = id => document.getElementById(id).value.trim();
+      const flavor = v('bread-flavor'), qty = Number(v('bread-qty'));
+      if ((flavor && qty < 1) || (!flavor && qty > 0)) { document.getElementById('order-help').textContent = 'Choose a sourdough flavor and a quantity of at least one, or select no sourdough and zero loaves.'; return; }
+      if (!qty && !v('other-items')) { document.getElementById('order-help').textContent = 'Please select at least one item.'; return; }
+      const body = ['Farmstand preorder request', 'Name: '+v('customer-name'), 'Contact: '+v('customer-email'), 'Sourdough: '+(qty ? qty+' loaf(es) of '+flavor+' (prepared by Elemental Sourdough)' : 'None'), 'Other items: '+(v('other-items')||'None'), 'Pickup/notes: '+(v('order-notes')||'None'), '', 'Please confirm availability, prices, and pickup arrangements.'].join('\n');
+      window.location.href = 'mailto:info@rainmakerprairiefarms.com?subject='+encodeURIComponent('Farmstand preorder request')+'&body='+encodeURIComponent(body);
+      document.getElementById('order-help').textContent = 'Your email app should open with the preorder request. Please send it to submit your request.';
+    });
+    </script>
     <section class="visit-panel section-pad"><div><p class="eyebrow">Before you come</p><h2>Ask what is available today</h2><p>Send us an email and we will let you know what is currently at the stand.</p></div><a class="button" href="mailto:info@rainmakerprairiefarms.com?subject=Farmstand%20availability">Check availability</a></section>
     <section class="note section-pad"><h2>A working farm</h2><p>Products, quantities, and hours may change without notice. The farmstand is not a full-time retail store, and not every item listed here is available every day.</p></section>
   </main>
